@@ -366,8 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Social sharing functions
   const SCHOOL_NAME = "Mergington High School";
   const MAX_TWITTER_LENGTH = 280;
-  const TWITTER_URL_LENGTH = 23; // Twitter's t.co URL shortener length
-  const ELLIPSIS_PADDING = 4; // Length of "... " added to truncated text
+  const TWITTER_URL_LENGTH = 23; // Twitter's t.co URL shortener length (when URL is in text)
+  const ELLIPSIS_LENGTH = 3; // Length of "..." added to truncated text
 
   function getActivityUrl(activityName) {
     // Create a URL that points to the current page with the activity name
@@ -384,9 +384,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function shareOnTwitter(activityName, details) {
     const url = getActivityUrl(activityName);
     // Truncate description if the tweet would be too long
+    // Note: URL is passed as a separate parameter and doesn't count against text limit,
+    // but Twitter will append it to the tweet, so we account for visual space
     let description = details.description;
     const baseText = `Check out this activity at ${SCHOOL_NAME}: ${activityName} - `;
-    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - TWITTER_URL_LENGTH - ELLIPSIS_PADDING;
+    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - TWITTER_URL_LENGTH - ELLIPSIS_LENGTH - 1; // -1 for space before URL
     
     if (description.length > maxDescLength) {
       description = description.substring(0, maxDescLength) + "...";
