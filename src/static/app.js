@@ -364,6 +364,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Social sharing functions
+  const SCHOOL_NAME = "Mergington High School";
+  const MAX_TWITTER_LENGTH = 280;
+
   function getActivityUrl(activityName) {
     // Create a URL that points to the current page with the activity name
     const baseUrl = window.location.origin + window.location.pathname;
@@ -378,7 +381,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function shareOnTwitter(activityName, details) {
     const url = getActivityUrl(activityName);
-    const text = `Check out this activity at Mergington High School: ${activityName} - ${details.description}`;
+    // Truncate description if the tweet would be too long
+    let description = details.description;
+    const baseText = `Check out this activity at ${SCHOOL_NAME}: ${activityName} - `;
+    const urlLength = 23; // Twitter's standard URL length
+    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - urlLength - 4; // 4 for "... "
+    
+    if (description.length > maxDescLength) {
+      description = description.substring(0, maxDescLength) + "...";
+    }
+    
+    const text = `${baseText}${description}`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
     window.open(shareUrl, "_blank", "width=600,height=400");
   }
@@ -387,33 +400,79 @@ document.addEventListener("DOMContentLoaded", () => {
     const url = getActivityUrl(activityName);
     const formattedSchedule = formatSchedule(details);
     const subject = `Check out this activity: ${activityName}`;
-    const body = `Hi,\n\nI wanted to share this extracurricular activity at Mergington High School:\n\n${activityName}\n${details.description}\n\nSchedule: ${formattedSchedule}\n\nLearn more: ${url}\n\nBest regards`;
+    const body = `Hi,\n\nI wanted to share this extracurricular activity at ${SCHOOL_NAME}:\n\n${activityName}\n${details.description}\n\nSchedule: ${formattedSchedule}\n\nLearn more: ${url}\n\nBest regards`;
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
   }
 
   function copyActivityLink(activityName, buttonElement) {
+    // Validate inputs
+    if (!buttonElement || !buttonElement.querySelector) {
+      console.error("Invalid button element");
+      showMessage("Failed to copy link. Please try again.", "error");
+      return;
+    }
+
     const url = getActivityUrl(activityName);
+    
+    // Check if Clipboard API is available
+    if (!navigator.clipboard) {
+      // Fallback for browsers without Clipboard API
+      fallbackCopyToClipboard(url, buttonElement);
+      return;
+    }
     
     // Use the Clipboard API to copy the URL
     navigator.clipboard.writeText(url).then(() => {
-      // Show visual feedback
-      const originalIcon = buttonElement.querySelector(".share-icon").textContent;
-      buttonElement.querySelector(".share-icon").textContent = "✓";
-      buttonElement.classList.add("copied");
-      
-      // Show success message
-      showMessage("Link copied to clipboard!", "success");
-      
-      // Reset button after 2 seconds
-      setTimeout(() => {
-        buttonElement.querySelector(".share-icon").textContent = originalIcon;
-        buttonElement.classList.remove("copied");
-      }, 2000);
+      showCopySuccess(buttonElement);
     }).catch((error) => {
       console.error("Failed to copy link:", error);
-      showMessage("Failed to copy link. Please try again.", "error");
+      // Try fallback method
+      fallbackCopyToClipboard(url, buttonElement);
     });
+  }
+
+  function fallbackCopyToClipboard(text, buttonElement) {
+    // Create a temporary textarea element
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+      const successful = document.execCommand("copy");
+      if (successful) {
+        showCopySuccess(buttonElement);
+      } else {
+        showMessage("Failed to copy link. Please copy manually: " + text, "error");
+      }
+    } catch (error) {
+      console.error("Fallback copy failed:", error);
+      showMessage("Failed to copy link. Please try again.", "error");
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
+  function showCopySuccess(buttonElement) {
+    // Show visual feedback
+    const iconElement = buttonElement.querySelector(".share-icon");
+    if (!iconElement) return;
+    
+    const originalIcon = iconElement.textContent;
+    iconElement.textContent = "✓";
+    buttonElement.classList.add("copied");
+    
+    // Show success message
+    showMessage("Link copied to clipboard!", "success");
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      iconElement.textContent = originalIcon;
+      buttonElement.classList.remove("copied");
+    }, 2000);
   }
 
   // Function to fetch activities from API with optional day and time filters
