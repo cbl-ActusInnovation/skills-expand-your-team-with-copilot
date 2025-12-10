@@ -366,6 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Social sharing functions
   const SCHOOL_NAME = "Mergington High School";
   const MAX_TWITTER_LENGTH = 280;
+  const TWITTER_URL_LENGTH = 23; // Twitter's t.co URL shortener length
+  const ELLIPSIS_PADDING = 4; // Length of "... " added to truncated text
 
   function getActivityUrl(activityName) {
     // Create a URL that points to the current page with the activity name
@@ -384,8 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Truncate description if the tweet would be too long
     let description = details.description;
     const baseText = `Check out this activity at ${SCHOOL_NAME}: ${activityName} - `;
-    const urlLength = 23; // Twitter's standard URL length
-    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - urlLength - 4; // 4 for "... "
+    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - TWITTER_URL_LENGTH - ELLIPSIS_PADDING;
     
     if (description.length > maxDescLength) {
       description = description.substring(0, maxDescLength) + "...";
@@ -684,17 +685,17 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="share-container">
         <div class="share-label">Share this activity:</div>
         <div class="share-buttons">
-          <button class="share-button share-facebook" data-activity="${name}" title="Share on Facebook">
-            <span class="share-icon">📘</span>
+          <button class="share-button share-facebook" data-activity="${name}" title="Share on Facebook" aria-label="Share ${name} on Facebook">
+            <span class="share-icon" aria-hidden="true">📘</span>
           </button>
-          <button class="share-button share-twitter" data-activity="${name}" title="Share on Twitter">
-            <span class="share-icon">🐦</span>
+          <button class="share-button share-twitter" data-activity="${name}" title="Share on Twitter" aria-label="Share ${name} on Twitter">
+            <span class="share-icon" aria-hidden="true">🐦</span>
           </button>
-          <button class="share-button share-email" data-activity="${name}" title="Share via Email">
-            <span class="share-icon">✉️</span>
+          <button class="share-button share-email" data-activity="${name}" title="Share via Email" aria-label="Share ${name} via Email">
+            <span class="share-icon" aria-hidden="true">✉️</span>
           </button>
-          <button class="share-button share-copy" data-activity="${name}" title="Copy Link">
-            <span class="share-icon">🔗</span>
+          <button class="share-button share-copy" data-activity="${name}" title="Copy Link" aria-label="Copy link to ${name}">
+            <span class="share-icon" aria-hidden="true">🔗</span>
           </button>
         </div>
       </div>
