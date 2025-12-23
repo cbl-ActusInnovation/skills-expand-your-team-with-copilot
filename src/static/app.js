@@ -387,6 +387,121 @@ document.addEventListener("DOMContentLoaded", () => {
     return "academic";
   }
 
+  // Social sharing functions
+  const SCHOOL_NAME = "Mergington High School";
+  const MAX_TWITTER_LENGTH = 280;
+  const TWITTER_URL_LENGTH = 23; // Twitter's t.co URL shortener length (when URL is in text)
+  const ELLIPSIS_LENGTH = 3; // Length of "..." added to truncated text
+
+  function getActivityUrl(activityName) {
+    // Create a URL that points to the current page with the activity name
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}#${encodeURIComponent(activityName)}`;
+  }
+
+  function shareOnFacebook(activityName, details) {
+    const url = getActivityUrl(activityName);
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    window.open(shareUrl, "_blank", "width=600,height=400");
+  }
+
+  function shareOnTwitter(activityName, details) {
+    const url = getActivityUrl(activityName);
+    // Truncate description if the tweet would be too long
+    // Note: URL is passed as a separate parameter and doesn't count against text limit,
+    // but Twitter will append it to the tweet, so we account for visual space
+    let description = details.description;
+    const baseText = `Check out this activity at ${SCHOOL_NAME}: ${activityName} - `;
+    const maxDescLength = MAX_TWITTER_LENGTH - baseText.length - TWITTER_URL_LENGTH - ELLIPSIS_LENGTH - 1; // -1 for space before URL
+    
+    if (description.length > maxDescLength) {
+      description = description.substring(0, maxDescLength) + "...";
+    }
+    
+    const text = `${baseText}${description}`;
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+    window.open(shareUrl, "_blank", "width=600,height=400");
+  }
+
+  function shareViaEmail(activityName, details) {
+    const url = getActivityUrl(activityName);
+    const formattedSchedule = formatSchedule(details);
+    const subject = `Check out this activity: ${activityName}`;
+    const body = `Hi,\n\nI wanted to share this extracurricular activity at ${SCHOOL_NAME}:\n\n${activityName}\n${details.description}\n\nSchedule: ${formattedSchedule}\n\nLearn more: ${url}\n\nBest regards`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
+  function copyActivityLink(activityName, buttonElement) {
+    // Validate inputs
+    if (!buttonElement || !buttonElement.querySelector) {
+      console.error("Invalid button element");
+      showMessage("Failed to copy link. Please try again.", "error");
+      return;
+    }
+
+    const url = getActivityUrl(activityName);
+    
+    // Check if Clipboard API is available
+    if (!navigator.clipboard) {
+      // Fallback for browsers without Clipboard API
+      fallbackCopyToClipboard(url, buttonElement);
+      return;
+    }
+    
+    // Use the Clipboard API to copy the URL
+    navigator.clipboard.writeText(url).then(() => {
+      showCopySuccess(buttonElement);
+    }).catch((error) => {
+      console.error("Failed to copy link:", error);
+      // Try fallback method
+      fallbackCopyToClipboard(url, buttonElement);
+    });
+  }
+
+  function fallbackCopyToClipboard(text, buttonElement) {
+    // Create a temporary textarea element
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+      const successful = document.execCommand("copy");
+      if (successful) {
+        showCopySuccess(buttonElement);
+      } else {
+        showMessage("Failed to copy link. Please copy manually: " + text, "error");
+      }
+    } catch (error) {
+      console.error("Fallback copy failed:", error);
+      showMessage("Failed to copy link. Please try again.", "error");
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
+  function showCopySuccess(buttonElement) {
+    // Show visual feedback
+    const iconElement = buttonElement.querySelector(".share-icon");
+    if (!iconElement) return;
+    
+    const originalIcon = iconElement.textContent;
+    iconElement.textContent = "✓";
+    buttonElement.classList.add("copied");
+    
+    // Show success message
+    showMessage("Link copied to clipboard!", "success");
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      iconElement.textContent = originalIcon;
+      buttonElement.classList.remove("copied");
+    }, 2000);
+  }
+
   // Function to fetch activities from API with optional day and time filters
   async function fetchActivities() {
     // Show loading skeletons first
@@ -598,6 +713,23 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-container">
+        <div class="share-label">Share this activity:</div>
+        <div class="share-buttons">
+          <button class="share-button share-facebook" data-activity="${name}" title="Share on Facebook" aria-label="Share ${name} on Facebook">
+            <span class="share-icon" aria-hidden="true">📘</span>
+          </button>
+          <button class="share-button share-twitter" data-activity="${name}" title="Share on Twitter" aria-label="Share ${name} on Twitter">
+            <span class="share-icon" aria-hidden="true">🐦</span>
+          </button>
+          <button class="share-button share-email" data-activity="${name}" title="Share via Email" aria-label="Share ${name} via Email">
+            <span class="share-icon" aria-hidden="true">✉️</span>
+          </button>
+          <button class="share-button share-copy" data-activity="${name}" title="Copy Link" aria-label="Copy link to ${name}">
+            <span class="share-icon" aria-hidden="true">🔗</span>
+          </button>
+        </div>
+      </div>
     `;
 
     // Add click handlers for delete buttons
@@ -615,6 +747,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for share buttons
+    const shareButtons = activityCard.querySelectorAll(".share-button");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", (event) => {
+        const activityName = event.currentTarget.dataset.activity;
+        if (button.classList.contains("share-facebook")) {
+          shareOnFacebook(activityName, details);
+        } else if (button.classList.contains("share-twitter")) {
+          shareOnTwitter(activityName, details);
+        } else if (button.classList.contains("share-email")) {
+          shareViaEmail(activityName, details);
+        } else if (button.classList.contains("share-copy")) {
+          copyActivityLink(activityName, event.currentTarget);
+        }
+      });
+    });
 
     activitiesList.appendChild(activityCard);
   }
